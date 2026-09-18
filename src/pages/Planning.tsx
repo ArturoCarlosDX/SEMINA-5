@@ -128,11 +128,11 @@ const initialProposals: CloudProposal[] = [
 
 type FormErrors = Partial<Record<keyof FormState, string>>
 
-const inputClass = 'w-full rounded-md border bg-slate-900/50 px-3 py-1.5 text-xs text-textPrimary placeholder:text-textSecondary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:text-darkTextPrimary dark:placeholder:text-darkTextSecondary dark:focus:ring-darkPrimary/20'
+const inputClass = 'w-full rounded-md border border-border bg-white px-3 py-1.5 text-xs text-textPrimary placeholder:text-textSecondary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:placeholder:text-darkTextSecondary dark:focus:ring-darkPrimary/20'
 const labelClass = 'mb-1 block text-[11px] font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary'
 
 function fieldClass(hasError: boolean) {
-  return `${inputClass} ${hasError ? 'border-danger' : 'border-slate-800'}`
+  return `${inputClass} ${hasError ? 'border-danger dark:border-darkDanger' : 'border-border dark:border-darkBorder'}`
 }
 
 function regionName(id: string) {
@@ -202,6 +202,11 @@ export default function Planning() {
     ...statusOptions.map((o) => ({ value: o.value as StatusFilter, label: o.label }))
   ]
 
+  const selectedProposals = useMemo(
+    () => proposals.filter((proposal) => selectedIds.includes(proposal.id)),
+    [proposals, selectedIds]
+  )
+
   const detailProposal = proposals.find((p) => p.id === detailId) ?? null
   const detailSuggestion = detailProposal ? suggestArchitecture(detailProposal.appType, detailProposal.estimatedUsers, detailProposal.availabilityLevel) : null
 
@@ -250,7 +255,7 @@ export default function Planning() {
     { label: 'Estado', value: (p) => <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[p.status]}`}>{statusLabel(p.status)}</span> },
     { label: 'Tipo', value: (p) => p.appType },
     { label: 'Región', value: (p) => regionName(p.region) },
-    { label: 'Usuarios', value: (p) => p.estimatedUsers.toLocaleString('es-ES') },
+    { label: 'Usuarios', value: (p) => p.estimatedUsers.toLocaleString('es-PE') },
     { label: 'Servicios', value: (p) => <div className="flex flex-wrap gap-1.5">{p.selectedServices.map((s) => <span key={s} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">{serviceName(s)}</span>)}</div> },
     { label: 'Descripción', value: (p) => p.description }
   ]
@@ -258,13 +263,13 @@ export default function Planning() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-textPrimary dark:text-darkTextPrimary">Planificación Cloud</h1>
+        <h1 className="text-3xl font-bold text-textPrimary dark:text-darkTextPrimary">Planificación Cloud</h1>
         <p className="mt-2 text-textSecondary dark:text-darkTextSecondary">Define propuestas de arquitectura cloud y regístralas para su evaluación.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <aside className="lg:col-span-4">
-          <form onSubmit={handleSubmit} className="space-y-3 rounded-2xl border border-slate-800 bg-background dark:bg-darkCard p-5">
+          <form onSubmit={handleSubmit} className="space-y-3 rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-darkBorder dark:bg-darkCard">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelClass}>Nombre</label>
@@ -304,8 +309,8 @@ export default function Planning() {
               <label className={labelClass}>Servicios Cloud</label>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 {awsServices.map((s) => (
-                  <label key={s.id} className="flex items-center gap-2 rounded-md border border-slate-800 px-2 py-1 text-xs">
-                    <input type="checkbox" checked={form.selectedServices.includes(s.id)} onChange={() => handleServiceToggle(s.id)} className="h-4 w-4" />
+                  <label key={s.id} className="flex items-center gap-2 rounded-md border border-border bg-white px-2 py-1 text-xs text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary">
+                    <input type="checkbox" checked={form.selectedServices.includes(s.id)} onChange={() => handleServiceToggle(s.id)} className="h-4 w-4 accent-primary" />
                     <span className="truncate">{s.name}</span>
                   </label>
                 ))}
@@ -328,11 +333,11 @@ export default function Planning() {
           </form>
 
           {suggestion && (
-            <div className="mt-4 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm">
-              <div className="flex items-center gap-2"><Lightbulb className="h-4 w-4 text-primary" /> Arquitectura sugerida</div>
+            <div className="mt-4 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm text-textPrimary shadow-sm dark:border-darkPrimary/40 dark:bg-darkCard dark:text-darkTextPrimary">
+              <div className="flex items-center gap-2"><Lightbulb className="h-4 w-4 text-primary dark:text-darkPrimary" /> Arquitectura sugerida</div>
               <p className="mt-2 font-semibold">{suggestion.architecture}</p>
-              <div className="mt-2 flex flex-wrap gap-1.5">{suggestion.services.map((s) => <span key={s} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{s}</span>)}</div>
-              <p className="mt-2 text-xs text-textSecondary">{suggestion.rationale}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">{suggestion.services.map((s) => <span key={s} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">{s}</span>)}</div>
+              <p className="mt-2 text-xs text-textSecondary dark:text-darkTextSecondary">{suggestion.rationale}</p>
               <p className="mt-2 font-bold">{currency.format(suggestion.estimatedCost)} / mes</p>
             </div>
           )}
@@ -346,15 +351,40 @@ export default function Planning() {
             <div className="flex items-center gap-2">
               <div className="flex gap-2">
                 {filterTabs.map((tab) => (
-                  <button key={tab.value} onClick={() => setStatusFilter(tab.value)} className={`rounded-full border px-3 py-1 text-xs ${statusFilter === tab.value ? 'bg-primary text-white' : 'bg-background dark:bg-darkCard'}`}>{tab.label} ({filterCounts[tab.value]})</button>
+                  <button key={tab.value} onClick={() => setStatusFilter(tab.value)} className={`rounded-full border px-3 py-1 text-xs text-textPrimary transition-colors dark:text-darkTextPrimary ${statusFilter === tab.value ? 'border-primary bg-primary text-white dark:border-darkPrimary dark:bg-darkPrimary' : 'border-border bg-white dark:border-darkBorder dark:bg-darkCard'}`}>{tab.label} ({filterCounts[tab.value]})</button>
                 ))}
               </div>
-              <button onClick={handleToggleCompareMode} className="ml-2 inline-flex items-center gap-2 rounded-md border px-3 py-1 text-xs"><Columns className="h-4 w-4" /> Comparar</button>
+              <button onClick={handleToggleCompareMode} className="ml-2 inline-flex items-center gap-2 rounded-md border border-border bg-white px-3 py-1 text-xs text-textPrimary shadow-sm dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary"><Columns className="h-4 w-4" /> Comparar</button>
             </div>
           </div>
 
+          {compareMode && selectedProposals.length === 2 && (
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-border bg-white p-3 shadow-sm dark:border-darkBorder dark:bg-darkCard">
+              <table className="min-w-full text-left text-xs text-textPrimary dark:text-darkTextPrimary">
+                <thead>
+                  <tr>
+                    <th className="px-2 py-2 font-semibold">Campo</th>
+                    {selectedProposals.map((proposal) => (
+                      <th key={proposal.id} className="px-2 py-2 font-semibold">{proposal.solutionName}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparisonRows.map((row) => (
+                    <tr key={row.label} className="border-t border-border dark:border-darkBorder">
+                      <td className="px-2 py-2 font-medium text-textSecondary dark:text-darkTextSecondary">{row.label}</td>
+                      {selectedProposals.map((proposal) => (
+                        <td key={`${proposal.id}-${row.label}`} className="px-2 py-2 align-top">{row.value(proposal)}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           {detailProposal && (
-            <section className="mt-4 rounded-2xl border border-border bg-background dark:bg-darkCard p-4">
+            <section className="mt-4 rounded-2xl border border-border bg-white p-4 shadow-sm dark:border-darkBorder dark:bg-darkCard">
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="font-semibold">{detailProposal.solutionName}</h3>
@@ -374,37 +404,45 @@ export default function Planning() {
                 <div>Disponibilidad: <strong className="font-semibold">{availabilitySla(detailProposal.availabilityLevel)}</strong></div>
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2">{detailProposal.selectedServices.map((s) => <span key={s} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs">{serviceName(s)}</span>)}</div>
+              <div className="mt-3 flex flex-wrap gap-2">{detailProposal.selectedServices.map((s) => <span key={s} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">{serviceName(s)}</span>)}</div>
 
-              {detailSuggestion && <div className="mt-3 p-3 rounded-md border bg-background text-sm">Arquitectura recomendada: <strong>{detailSuggestion.architecture}</strong> — {currency.format(detailSuggestion.estimatedCost)} / mes</div>}
+              {detailSuggestion && <div className="mt-3 rounded-md border border-border bg-background p-3 text-sm text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary">Arquitectura recomendada: <strong>{detailSuggestion.architecture}</strong> — {currency.format(detailSuggestion.estimatedCost)} / mes</div>}
             </section>
           )}
 
           <div className="mt-4 max-h-[560px] overflow-y-auto space-y-3">
             {filteredProposals.map((p) => (
-              <article key={p.id} className="rounded-2xl border border-border bg-background dark:bg-darkCard p-4">
-                <div className="flex items-start justify-between">
+              <article key={p.id} className="rounded-2xl border border-border bg-white p-4 shadow-sm dark:border-darkBorder dark:bg-darkCard">
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
-                    <h4 className="font-semibold text-sm">{p.solutionName}</h4>
-                    <div className="mt-1 flex items-center gap-2 text-xs text-textSecondary">
+                    <div className="flex items-center justify-between gap-3">
+                      <h4 className="font-semibold text-sm text-textPrimary dark:text-darkTextPrimary">{p.solutionName}</h4>
+                      {compareMode && (
+                        <label className="inline-flex items-center gap-2 text-[11px] text-textSecondary dark:text-darkTextSecondary">
+                          <input type="checkbox" checked={selectedIds.includes(p.id)} disabled={!selectedIds.includes(p.id) && selectedIds.length >= 2} onChange={() => handleToggleCompare(p.id)} className="h-4 w-4 accent-primary" />
+                          Compare
+                        </label>
+                      )}
+                    </div>
+                    <div className="mt-1 flex items-center gap-2 text-xs text-textSecondary dark:text-darkTextSecondary">
                       <span>{p.appType}</span>
                       <span className={`rounded-full px-2 py-0.5 text-xs ${statusStyles[p.status]}`}>{statusLabel(p.status)}</span>
                     </div>
 
-                    <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-textSecondary">
-                      <div>Región: <span className="font-semibold text-textPrimary">{regionName(p.region)}</span></div>
-                      <div>Usuarios: <span className="font-semibold">{p.estimatedUsers.toLocaleString('es-ES')}</span></div>
+                    <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-textSecondary dark:text-darkTextSecondary">
+                      <div>Región: <span className="font-semibold text-textPrimary dark:text-darkTextPrimary">{regionName(p.region)}</span></div>
+                      <div>Usuarios: <span className="font-semibold">{p.estimatedUsers.toLocaleString('es-PE')}</span></div>
                       <div>Disponibilidad: <span className="font-semibold">{availabilitySla(p.availabilityLevel)}</span></div>
                     </div>
 
-                    <div className="mt-2 flex flex-wrap gap-1.5">{p.selectedServices.map((s) => <span key={s} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs">{serviceName(s)}</span>)}</div>
+                    <div className="mt-2 flex flex-wrap gap-1.5">{p.selectedServices.map((s) => <span key={s} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">{serviceName(s)}</span>)}</div>
                   </div>
 
                   <div className="flex flex-col items-end gap-2 ml-4">
-                    <button onClick={() => setDetailId(p.id)} className="text-xs underline">Ver detalles</button>
+                    <button onClick={() => setDetailId(p.id)} className="text-xs text-textPrimary underline dark:text-darkTextPrimary">Ver detalles</button>
                     <div className="flex gap-2">
-                      <button onClick={() => { const blob = new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `propuesta-${p.solutionName.replace(/[^a-z0-9]+/gi, '-')}.json`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); }} className="text-xs">Exportar</button>
-                      <button onClick={() => handleRemove(p.id)} className="text-xs text-danger">Eliminar</button>
+                      <button onClick={() => { const blob = new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `propuesta-${p.solutionName.replace(/[^a-z0-9]+/gi, '-')}.json`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); }} className="text-xs text-textPrimary dark:text-darkTextPrimary">Exportar</button>
+                      <button onClick={() => handleRemove(p.id)} className="text-xs text-danger dark:text-darkDanger">Eliminar</button>
                     </div>
                   </div>
                 </div>
