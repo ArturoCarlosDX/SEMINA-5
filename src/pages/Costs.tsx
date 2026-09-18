@@ -1,11 +1,11 @@
-import { useState } from 'react'
-import { Calendar, DollarSign, Gauge, Wallet } from 'lucide-react'
+import { useState, type FormEvent } from 'react'
+import { Calculator, Calendar, DollarSign, Gauge, Plus, Wallet } from 'lucide-react'
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import StatCard from '../components/StatCard'
 import CostCard from '../components/CostCard'
 import { useTheme } from '../hooks/useTheme'
-import { costs } from '../data/costs'
-import type { CostCategory, CostEnvironment } from '../types/cloud'
+import { costs as initialCosts } from '../data/costs'
+import type { CostCategory, CostEnvironment, CostItem } from '../types/cloud'
 
 const currency = new Intl.NumberFormat('es-ES', {
   style: 'currency',
@@ -20,6 +20,26 @@ const currency0 = new Intl.NumberFormat('es-ES', {
 })
 
 const round = (value: number) => Math.round(value * 100) / 100
+
+const HOURS_PER_MONTH = 730
+
+const serviceCatalog: { name: string; unitCost: number; category: CostCategory }[] = [
+  { name: 'EC2', unitCost: 120, category: 'Compute' },
+  { name: 'S3', unitCost: 0.023, category: 'Storage' },
+  { name: 'RDS', unitCost: 185, category: 'Database' },
+  { name: 'CloudFront', unitCost: 95.5, category: 'Networking' },
+  { name: 'Route 53', unitCost: 5, category: 'Networking' },
+  { name: 'VPC (NAT Gateway)', unitCost: 45, category: 'Networking' }
+]
+
+function estimateCosts(quantity: number, hours: number, unitCost: number) {
+  const monthlyCost = round(quantity * unitCost * (hours / HOURS_PER_MONTH))
+  return {
+    estimatedCost: monthlyCost,
+    monthlyCost,
+    annualCost: round(monthlyCost * 12)
+  }
+}
 
 const LIGHT_CHART_COLORS = ['#2563EB', '#16A34A', '#F59E0B', '#DC2626']
 const DARK_CHART_COLORS = ['#3B82F6', '#22C55E', '#FBBF24', '#F87171']
@@ -64,15 +84,29 @@ export default function Costs() {
   const [commitment, setCommitment] = useState<Commitment>('none')
   const [envFilter, setEnvFilter] = useState<'all' | CostEnvironment>('all')
   const [catFilter, setCatFilter] = useState<'all' | CostCategory>('all')
+  const [items, setItems] = useState<CostItem[]>(initialCosts)
+  const [serviceName, setServiceName] = useState(serviceCatalog[0].name)
+  const [quantity, setQuantity] = useState('1')
+  const [hours, setHours] = useState(String(HOURS_PER_MONTH))
+  const [environment, setEnvironment] = useState<CostEnvironment>('production')
+
+  const selectedService =
+    serviceCatalog.find((service) => service.name === serviceName) ?? serviceCatalog[0]
+  const quantityValue = Number(quantity)
+  const hoursValue = Number(hours)
+  const preview =
+    quantityValue > 0 && hoursValue > 0
+      ? estimateCosts(quantityValue, hoursValue, selectedService.unitCost)
+      : null
 
   const activeCommitment =
     commitmentOptions.find((option) => option.value === commitment) ?? commitmentOptions[0]
   const multiplier = 1 - activeCommitment.discount / 100
 
-  const baseMonthly = costs.reduce((sum, item) => sum + item.monthlyCost, 0)
-  const baseAnnual = costs.reduce((sum, item) => sum + item.annualCost, 0)
+  const baseMonthly = items.reduce((sum, item) => sum + item.monthlyCost, 0)
+  const baseAnnual = items.reduce((sum, item) => sum + item.annualCost, 0)
 
-  const discountedCosts = costs.map((item) => ({
+  const discountedCosts = items.map((item) => ({
     ...item,
     monthlyCost: round(item.monthlyCost * multiplier),
     annualCost: round(item.annualCost * multiplier)
@@ -116,6 +150,29 @@ export default function Costs() {
         : 'border-border bg-white text-textSecondary hover:bg-background hover:text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:hover:bg-darkBackground dark:hover:text-darkTextPrimary'
     }`
 
+  function handleEstimate(event: FormEvent) {
+    event.preventDefault()
+    if (!preview) return
+
+    const nextItem: CostItem = {
+      id: selectedService.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      service: selectedService.name,
+      quantity: quantityValue,
+      estimatedHours: hoursValue,
+      unitCost: selectedService.unitCost,
+      monthlyCost: preview.monthlyCost,
+      annualCost: preview.annualCost,
+      category: selectedService.category,
+      environment
+    }
+
+    setItems((previous) => {
+      const index = previous.findIndex((item) => item.service === nextItem.service)
+      if (index === -1) return [nextItem, ...previous]
+      return previous.map((item, i) => (i === index ? { ...item, ...nextItem, id: item.id } : item))
+    })
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -124,6 +181,98 @@ export default function Costs() {
           Estimación mensual y anual de los servicios desplegados.
         </p>
       </div>
+
+      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
+          <Calculator className="h-5 w-5 text-primary dark:text-darkPrimary" />
+          Estimación simulada
+        </h2>
+        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
+          Selecciona un servicio, cantidad y horas para calcular el costo estimado.
+        </p>
+
+        <form onSubmit={handleEstimate} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <label className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
+            Servicio
+            <select
+              value={serviceName}
+              onChange={(event) => setServiceName(event.target.value)}
+              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
+            >
+              {serviceCatalog.map((service) => (
+                <option key={service.name} value={service.name}>
+                  {service.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
+            Cantidad
+            <input
+              type="number"
+              min={1}
+              value={quantity}
+              onChange={(event) => setQuantity(event.target.value)}
+              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
+            />
+          </label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
+            Horas estimadas
+            <input
+              type="number"
+              min={1}
+              max={HOURS_PER_MONTH}
+              value={hours}
+              onChange={(event) => setHours(event.target.value)}
+              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
+            />
+          </label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
+            Entorno
+            <select
+              value={environment}
+              onChange={(event) => setEnvironment(event.target.value as CostEnvironment)}
+              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
+            >
+              <option value="dev">Dev</option>
+              <option value="staging">Staging</option>
+              <option value="production">Producción</option>
+            </select>
+          </label>
+          <button
+            type="submit"
+            disabled={!preview}
+            className="inline-flex items-center justify-center gap-2 self-end rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Plus className="h-4 w-4" />
+            Aplicar estimación
+          </button>
+        </form>
+
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-xl bg-background p-4 dark:bg-darkBackground">
+            <p className="text-xs text-textSecondary dark:text-darkTextSecondary">Costo estimado</p>
+            <p className="mt-1 text-xl font-bold text-textPrimary dark:text-darkTextPrimary">
+              {preview ? currency.format(preview.estimatedCost) : '—'}
+            </p>
+          </div>
+          <div className="rounded-xl bg-background p-4 dark:bg-darkBackground">
+            <p className="text-xs text-textSecondary dark:text-darkTextSecondary">Costo mensual</p>
+            <p className="mt-1 text-xl font-bold text-textPrimary dark:text-darkTextPrimary">
+              {preview ? currency.format(preview.monthlyCost) : '—'}
+            </p>
+          </div>
+          <div className="rounded-xl bg-background p-4 dark:bg-darkBackground">
+            <p className="text-xs text-textSecondary dark:text-darkTextSecondary">Costo anual</p>
+            <p className="mt-1 text-xl font-bold text-textPrimary dark:text-darkTextPrimary">
+              {preview ? currency.format(preview.annualCost) : '—'}
+            </p>
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-textSecondary dark:text-darkTextSecondary">
+          Fórmula simulada: cantidad × tarifa mensual × (horas / {HOURS_PER_MONTH}). El gráfico y las tarjetas se actualizan al aplicar.
+        </p>
+      </section>
 
       <section className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
         <div className="flex flex-wrap items-center justify-between gap-3">

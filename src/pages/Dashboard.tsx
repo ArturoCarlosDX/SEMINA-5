@@ -3,12 +3,14 @@ import {
   Activity,
   AlertCircle,
   AlertTriangle,
+  Boxes,
   Calendar,
   DollarSign,
   Gauge,
   Globe,
   Info,
   Key,
+  Network,
   Server,
   ShieldCheck,
   type LucideIcon
@@ -186,6 +188,22 @@ export default function Dashboard() {
     }
   ]
 
+  const securityStatus = securityItems.some((item) => item.status === 'inactive')
+    ? 'En riesgo'
+    : securityItems.some((item) => item.status === 'warning')
+      ? 'Requiere revisión'
+      : 'Correcto'
+
+  const cloudResources = new Set(regions.flatMap((region) => region.deployedServices)).size
+
+  const architectureStatus = trafficLoad
+    ? 'Degradada'
+    : regions.some((region) => region.status === 'down')
+      ? 'Caída'
+      : regions.some((region) => region.status === 'degraded')
+        ? 'Degradada'
+        : 'Operativa'
+
   function handleToggleTraffic() {
     const next = !trafficLoad
     setTrafficLoad(next)
@@ -248,6 +266,13 @@ export default function Dashboard() {
                 value={`${operationalRegions} de ${regions.length}`}
                 icon={Activity}
               />
+              <StatCard title="Estado de seguridad" value={securityStatus} icon={ShieldCheck} />
+              <StatCard
+                title="Recursos Cloud"
+                value={`${cloudResources} desplegados`}
+                icon={Boxes}
+              />
+              <StatCard title="Estado de la arquitectura" value={architectureStatus} icon={Network} />
             </div>
           </section>
 
